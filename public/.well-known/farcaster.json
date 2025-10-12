@@ -1,0 +1,20 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjk4NjIzNSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDI0NkE2NGZDNTY4NzU5ZGMxRTMzNjQwNTg4NDA3MjM3NzUzQjkzRGMifQ",
+    "payload": "eyJkb21haW4iOiJkcmFnbWFuLnh5eiJ9",
+    "signature": "MHgyOTgxMDMwODRiZGY4M2ZhNWZlOTc2NjYyN2RhYjJkNzliODZjOWE0NmI5ZDliMWJmZjFkMTRlODRmNWU1ZDQ5NzgwMzkyOThjZWNjNjExMzUwODE1ZDcxMjQxNGM0YzZkNmMyODQzNDhlYThlYmVkM2M1OWNkZTBjODQzNjE0NjFj"
+  },
+   "miniapp": {
+    "version": "1",
+    "name": "Dragman",
+    "primaryCategory": "games",
+    "tags": ["demo", "miniapp", "dragman"],
+    "homeUrl": "https://dragman.xyz",
+    "iconUrl": "https://dragman.xyz/icon.png",
+    "splashImageUrl": "https://dragman.xyz/splash.png",
+    "splashBackgroundColor": "#000000",
+    "description": "My first Base Mini App"
+  }
+}
+
+
