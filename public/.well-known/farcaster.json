@@ -29,6 +29,7 @@
     "ogTitle": "Dragman Mini App",
     "ogDescription": "Challenge friends in this exciting dragman game!",
     "ogImageUrl": "https://dragman.xyz/og-image.png",
+    "imageUrl": "https://dragman.xyz/preview.png",
     "noindex": true
   }
 }
