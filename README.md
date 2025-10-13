@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dragman Mini App 🐉
+
+A fast, fun, social dragon game built as a Base mini app. Challenge friends, compete on leaderboards, and unlock achievements!
+
+## Features
+
+- 🎮 **Fast Gameplay** - Tap the dragon to score points
+- 🏆 **Leaderboards** - Compete with friends globally
+- 🎯 **Daily Challenges** - Complete daily tasks for rewards
+- 🏅 **Achievements** - Unlock badges and accomplishments
+- 🔊 **Sound Effects** - Immersive audio feedback
+- ✨ **Animations** - Smooth visual feedback
+- 📱 **Mobile Optimized** - Perfect for mobile gaming
+- 🔗 **Social Sharing** - Share scores with friends
+- 🔔 **Notifications** - Get notified about achievements
+
+## Tech Stack
+
+- **Framework**: Next.js 14
+- **Platform**: Base Mini App
+- **Wallet**: Wagmi + Base networks
+- **Styling**: Tailwind CSS
+- **Analytics**: Google Analytics
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/Dragboyz/miniapp-dragman.git
+cd miniapp-dragman
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Production Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Build for production
+npm run build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start production server
+npm start
+```
 
-## Learn More
+## Base Mini App Features
 
-To learn more about Next.js, take a look at the following resources:
+- ✅ **SDK Integration** - Full Base Mini App SDK integration
+- ✅ **Context Access** - User profile, location, and client data
+- ✅ **Haptic Feedback** - Device vibration for enhanced UX
+- ✅ **Native Sharing** - Compose casts directly from the app
+- ✅ **Notifications** - In-app notification system
+- ✅ **Authentication** - Context-based user authentication
+- ✅ **Manifest Signed** - Properly signed for Base deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Game Mechanics
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Tap to Score**: Tap the dragon to accumulate points
+2. **Time Limit**: Each game lasts 3 seconds
+3. **High Score**: Track your personal best
+4. **Achievements**: Unlock badges for various milestones
+5. **Daily Challenges**: Complete daily tasks for rewards
+6. **Social Features**: Share scores and compete with friends
 
-## Deploy on Vercel
+## Contributing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT License - see LICENSE file for details
+
+## Support
+
+For support, email support@dragman.xyz or create an issue on GitHub.
+
+---
+
+**Powered by Base** 🚀
