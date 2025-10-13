@@ -4,17 +4,31 @@
     "payload": "eyJkb21haW4iOiJkcmFnbWFuLnh5eiJ9",
     "signature": "MHgyOTgxMDMwODRiZGY4M2ZhNWZlOTc2NjYyN2RhYjJkNzliODZjOWE0NmI5ZDliMWJmZjFkMTRlODRmNWU1ZDQ5NzgwMzkyOThjZWNjNjExMzUwODE1ZDcxMjQxNGM0YzZkNmMyODQzNDhlYThlYmVkM2M1OWNkZTBjODQzNjE0NjFj"
   },
-   "miniapp": {
+   "baseBuilder": {
+    "allowedAddresses": ["0x34F08a077CEf3af6584579a1c4a03C4A603Cb705"]
+  },
+  "miniapp": {
     "version": "1",
-    "name": "Dragman",
-    "primaryCategory": "games",
-    "tags": ["demo", "miniapp", "dragman"],
+    "name": "Dragman Mini App",
     "homeUrl": "https://dragman.xyz",
     "iconUrl": "https://dragman.xyz/icon.png",
     "splashImageUrl": "https://dragman.xyz/splash.png",
-    "splashBackgroundColor": "#000000",
-    "description": "My first Base Mini App"
+    "splashBackgroundColor": "#667eea",
+    "webhookUrl": "https://dragman.xyz/api/webhook",
+    "subtitle": "Fast, fun, social dragon game",
+    "description": "Challenge friends in this exciting dragman game! Tap the dragon to score points and compete with friends.",
+    "screenshotUrls": [
+      "https://dragman.xyz/screenshot1.png",
+      "https://dragman.xyz/screenshot2.png",
+      "https://dragman.xyz/screenshot3.png"
+    ],
+    "primaryCategory": "games",
+    "tags": ["dragon", "game", "mini", "base", "social"],
+    "heroImageUrl": "https://dragman.xyz/hero.png",
+    "tagline": "Play instantly",
+    "ogTitle": "Dragman Mini App",
+    "ogDescription": "Challenge friends in this exciting dragman game!",
+    "ogImageUrl": "https://dragman.xyz/og-image.png",
+    "noindex": true
   }
 }
-
-
