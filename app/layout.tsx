@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from '../providers';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,17 +14,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Dragman.xyz",
-  description: "Welcome to Dragman.xyz",
+  title: "Dragman Mini App",
+  description: "Challenge friends in this exciting dragman game! Tap the dragon to score points and compete with friends.",
   other: {
     'fc:miniapp': JSON.stringify({
       "version": "next",
-      "imageUrl": "https://dragman.xyz/embed-image.png",
+      "imageUrl": "https://dragman.xyz/preview.png",
       "button": {
         "title": "Play Now",
         "action": {
           "type": "launch_miniapp",
-          "name": "Dragman.xyz",
+          "name": "Dragman Mini App",
           "url": "https://dragman.xyz"
         }
       }
@@ -41,7 +42,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

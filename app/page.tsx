@@ -7,6 +7,9 @@ import { useGasFreeTransaction } from '../lib/sponsored-transactions';
 import { useMultiStepTransaction } from '../lib/transaction-batching';
 import { useBaseAccountFeatures } from '../lib/base-account';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -14,6 +17,13 @@ export default function Home() {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBaseAccountDemo, setShowBaseAccountDemo] = useState(false);
+  
+  // Context state
+  const [isInMiniApp, setIsInMiniApp] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [location, setLocation] = useState<any>(null);
+  const [client, setClient] = useState<any>(null);
+  const [features, setFeatures] = useState<any>(null);
 
   // Base Account features
   const { capabilities } = useBaseAccountFeatures();
@@ -73,6 +83,12 @@ export default function Home() {
 
   const handlePlay = async () => {
     setIsPlaying(true);
+    
+    // Trigger haptic feedback if available
+    if (features?.haptics && navigator.vibrate) {
+      navigator.vibrate(50); // Short vibration
+    }
+    
     // Simulate scoring
     const interval = setInterval(() => {
       setScore(prev => prev + 1);
@@ -85,6 +101,11 @@ export default function Home() {
       // Update high score
       if (score > highScore) {
         setHighScore(score);
+        
+        // Trigger haptic feedback for new high score
+        if (features?.haptics && navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]); // Pattern vibration
+        }
       }
       
       // Send achievement notification
@@ -126,22 +147,47 @@ export default function Home() {
   };
 
   useEffect(() => {
-    // Hide loading splash screen and display your app
+    // Initialize SDK and load context
     const initializeSDK = async () => {
       try {
         console.log('Initializing Base Mini App SDK...');
         
-        // Check if SDK is available
-        if (typeof window !== 'undefined' && window.parent !== window) {
-          console.log('Running in iframe context - SDK should be available');
-          await sdk.actions.ready();
-          console.log('SDK ready called successfully');
-        } else {
-          console.log('Not running in iframe context - SDK may not be available');
-          // Still try to call ready in case SDK is available
-          await sdk.actions.ready();
-          console.log('SDK ready called successfully (outside iframe)');
+        // Check if we're in a Mini App
+        const miniAppStatus = await sdk.isInMiniApp();
+        setIsInMiniApp(miniAppStatus);
+        console.log('Mini App status:', miniAppStatus);
+        
+        if (miniAppStatus) {
+          // Get full context
+          const context = await sdk.context;
+          console.log('Mini App context:', context);
+          
+          // Extract context data
+          if (context.user) {
+            setUser(context.user);
+            console.log('User:', context.user);
+          }
+          
+          if (context.location) {
+            setLocation(context.location);
+            console.log('Location:', context.location);
+          }
+          
+          if (context.client) {
+            setClient(context.client);
+            console.log('Client:', context.client);
+          }
+          
+          if (context.features) {
+            setFeatures(context.features);
+            console.log('Features:', context.features);
+          }
         }
+        
+        // Hide loading splash screen and display your app
+        await sdk.actions.ready();
+        console.log('SDK ready called successfully');
+        
       } catch (error) {
         console.error('SDK initialization failed:', error);
         console.log('This is normal if not running in Base app environment');
@@ -167,6 +213,36 @@ export default function Home() {
         {/* Title */}
         <h1 className="text-3xl font-bold text-gray-800 mb-2">DRAGMAN</h1>
         <p className="text-gray-600 mb-6">Fast, Fun, Social Dragon Game</p>
+        
+        {/* User Profile Display */}
+        {isInMiniApp && user && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-center space-x-3">
+              {user.pfpUrl && (
+                <img 
+                  src={user.pfpUrl} 
+                  alt="Profile" 
+                  width={32} 
+                  height={32} 
+                  className="rounded-full"
+                />
+              )}
+              <div className="text-center">
+                <p className="text-sm font-semibold text-gray-800">
+                  Welcome, {user.displayName || user.username || `FID ${user.fid}`}!
+                </p>
+                {location && (
+                  <p className="text-xs text-gray-600">
+                    {location.type === 'cast_embed' && 'Opened from cast'}
+                    {location.type === 'notification' && 'Opened from notification'}
+                    {location.type === 'launcher' && 'Opened from app catalog'}
+                    {location.type === 'channel' && `Opened from ${location.channel?.name} channel`}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Game Description */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
