@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import Image from "next/image";
-// Base Account features removed to avoid wallet detection banner
+import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,6 @@ export default function Home() {
   const [highScore, setHighScore] = useState(0);
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showBaseAccountDemo, setShowBaseAccountDemo] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState([
     { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉" },
@@ -58,7 +57,17 @@ export default function Home() {
   const [authenticatedUser, setAuthenticatedUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Base Account features removed to avoid wallet detection banner
+  // Wallet connection state
+  const { address, isConnected, connector } = useAccount();
+  const { connect, connectors, error: connectError, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { data: balance } = useBalance({ address });
+  
+  // Base Account features
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showBaseAccountDemo, setShowBaseAccountDemo] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<string>('0');
+  const [networkName, setNetworkName] = useState<string>('Unknown');
 
   const handleShare = async () => {
     try {
@@ -141,7 +150,88 @@ export default function Home() {
     console.log('Signed out');
   };
 
-  // Base Account demo functions removed to avoid wallet detection banner
+  // Wallet connection functions
+  const handleConnectWallet = async (connector: any) => {
+    try {
+      await connect({ connector });
+      setShowWalletModal(false);
+      
+      // Track wallet connection
+      trackEvent('wallet_connected', {
+        label: 'Wallet Connected',
+        value: connector.name,
+        wallet_type: connector.name
+      });
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+    }
+  };
+
+  const handleDisconnectWallet = () => {
+    disconnect();
+    
+    // Track wallet disconnection
+    trackEvent('wallet_disconnected', {
+      label: 'Wallet Disconnected',
+      value: connector?.name || 'Unknown'
+    });
+  };
+
+  const handleSwitchNetwork = async () => {
+    try {
+      // Note: Network switching would be handled by the wallet
+      // This is a placeholder for future implementation
+      console.log('Network switch requested - handled by wallet');
+      
+      // Track network switch request
+      trackEvent('network_switch_requested', {
+        label: 'Network Switch Requested',
+        value: 'Base Mainnet',
+        network: 'Base'
+      });
+      
+      alert('Please switch to Base network in your wallet');
+    } catch (error) {
+      console.error('Failed to request network switch:', error);
+    }
+  };
+
+  // Base Account demo functions
+  const handleGasFreeTransaction = async () => {
+    try {
+      // Simulate gas-free transaction
+      console.log('Gas-free transaction initiated');
+      
+      // Track gas-free transaction
+      trackEvent('gas_free_transaction', {
+        label: 'Gas-Free Transaction',
+        value: 1,
+        transaction_type: 'gas_free'
+      });
+      
+      alert('Gas-free transaction feature would be implemented here!');
+    } catch (error) {
+      console.error('Gas-free transaction failed:', error);
+    }
+  };
+
+  const handleMultiStepTransaction = async () => {
+    try {
+      // Simulate multi-step transaction
+      console.log('Multi-step transaction initiated');
+      
+      // Track multi-step transaction
+      trackEvent('multi_step_transaction', {
+        label: 'Multi-Step Transaction',
+        value: 1,
+        transaction_type: 'multi_step'
+      });
+      
+      alert('Multi-step transaction feature would be implemented here!');
+    } catch (error) {
+      console.error('Multi-step transaction failed:', error);
+    }
+  };
 
   // Sound effects
   const playSound = (type: string) => {
@@ -396,6 +486,17 @@ export default function Home() {
     // Add a small delay to ensure SDK is loaded
     setTimeout(initializeSDK, 100);
   }, []);
+
+  // Update wallet balance and network info
+  useEffect(() => {
+    if (balance) {
+      setWalletBalance(balance.formatted);
+    }
+    
+    if (connector) {
+      setNetworkName(connector.name);
+    }
+  }, [balance, connector]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
@@ -443,6 +544,48 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Wallet Connection Status */}
+        <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+          <div className="text-center">
+            {isConnected ? (
+              <div>
+                <p className="text-sm font-semibold text-blue-800">
+                  🔗 Wallet Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Balance: {walletBalance} ETH | Network: {networkName}
+                </p>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={handleSwitchNetwork}
+                    className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                  >
+                    Switch to Base
+                  </button>
+                  <button
+                    onClick={handleDisconnectWallet}
+                    className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                  >
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  🔓 Wallet Not Connected
+                </p>
+                <button
+                  onClick={() => setShowWalletModal(true)}
+                  className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                >
+                  Connect Wallet
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Authentication Status */}
         <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
@@ -527,8 +670,46 @@ export default function Home() {
           >
             🏆 Leaderboard
           </button>
-          
-          {/* Base Account Features removed to avoid wallet detection banner */}
+
+          {/* Base Account Features */}
+          {isConnected && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowBaseAccountDemo(!showBaseAccountDemo)}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+              >
+                🏦 Base Account Features
+              </button>
+              
+              {showBaseAccountDemo && (
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                  <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏦 Base Account Features</h3>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleGasFreeTransaction}
+                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    >
+                      ⛽ Gas-Free Transaction
+                    </button>
+                    <button
+                      onClick={handleMultiStepTransaction}
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    >
+                      🔄 Multi-Step Transaction
+                    </button>
+                    <div className="text-center mt-3">
+                      <p className="text-xs text-gray-600">
+                        Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Balance: {walletBalance} ETH
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Leaderboard Modal */}
           {showLeaderboard && (
@@ -691,6 +872,44 @@ export default function Home() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
             <p className="text-gray-700 font-semibold">Playing...</p>
             <p className="text-sm text-gray-500">Tap the dragon to score!</p>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Connection Modal */}
+      {showWalletModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
+            <div className="text-4xl mb-4">🔗</div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Connect Wallet</h3>
+            <p className="text-gray-600 mb-4">
+              Choose your wallet to connect to Dragman and access Base Account features.
+            </p>
+            <div className="space-y-3">
+              {connectors.map((connector) => (
+                <button
+                  key={connector.uid}
+                  onClick={() => handleConnectWallet(connector)}
+                  disabled={isPending}
+                  className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPending ? 'Connecting...' : `Connect ${connector.name}`}
+                </button>
+              ))}
+            </div>
+            {connectError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">
+                  Connection failed: {connectError.message}
+                </p>
+              </div>
+            )}
+            <button
+              onClick={() => setShowWalletModal(false)}
+              className="mt-4 w-full bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
