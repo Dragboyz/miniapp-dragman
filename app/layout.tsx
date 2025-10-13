@@ -23,7 +23,7 @@ export const metadata: Metadata = {
       "button": {
         "title": "Play Now",
         "action": {
-          "type": "launch_miniapp",
+          "type": "launch_frame",
           "name": "Dragman Mini App",
           "url": "https://dragman.xyz"
         }

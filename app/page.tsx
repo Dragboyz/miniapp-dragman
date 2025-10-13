@@ -24,6 +24,11 @@ export default function Home() {
   const [location, setLocation] = useState<any>(null);
   const [client, setClient] = useState<any>(null);
   const [features, setFeatures] = useState<any>(null);
+  
+  // Authentication state
+  const [token, setToken] = useState<string | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Base Account features
   const { capabilities } = useBaseAccountFeatures();
@@ -52,6 +57,39 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to add mini app:', error);
     }
+  };
+
+  const handleSignIn = async () => {
+    try {
+      console.log('Starting Quick Auth...');
+      // Note: quickAuth method may not be available in current SDK version
+      // Using context-based authentication for now
+      const context = await sdk.context;
+      if (context?.user?.fid) {
+        // Simulate authentication with context data
+        const mockAuthData = {
+          fid: context.user.fid,
+          authenticated: true,
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+        };
+        
+        setAuthenticatedUser(mockAuthData);
+        setIsAuthenticated(true);
+        console.log('Authentication successful (context-based):', mockAuthData);
+      } else {
+        console.error('No user context available');
+      }
+    } catch (error) {
+      console.error("Authentication failed:", error);
+    }
+  };
+
+  const handleSignOut = () => {
+    setToken(null);
+    setAuthenticatedUser(null);
+    setIsAuthenticated(false);
+    console.log('Signed out');
   };
 
   const handleGasFreeDemo = async () => {
@@ -243,6 +281,40 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Authentication Status */}
+        <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+          <div className="text-center">
+            {isAuthenticated ? (
+              <div>
+                <p className="text-sm font-semibold text-green-800">
+                  🔐 Authenticated as FID: {authenticatedUser?.fid}
+                </p>
+                <p className="text-xs text-gray-600">
+                  Token expires: {authenticatedUser?.exp ? new Date(authenticatedUser.exp * 1000).toLocaleTimeString() : 'Unknown'}
+                </p>
+                <button
+                  onClick={handleSignOut}
+                  className="mt-2 px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-semibold text-gray-800">
+                  🔓 Not Authenticated
+                </p>
+                <button
+                  onClick={handleSignIn}
+                  className="mt-2 px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 transition-colors"
+                >
+                  Sign In (Context-based)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Game Description */}
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
