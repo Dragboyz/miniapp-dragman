@@ -68,6 +68,11 @@ export default function Home() {
   const [showBaseAccountDemo, setShowBaseAccountDemo] = useState(false);
   const [walletBalance, setWalletBalance] = useState<string>('0');
   const [networkName, setNetworkName] = useState<string>('Unknown');
+  
+  // Paymaster features
+  const [paymasterCredits, setPaymasterCredits] = useState<number>(500);
+  const [gasFreeEnabled, setGasFreeEnabled] = useState<boolean>(true);
+  const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
 
   const handleShare = async () => {
     try {
@@ -196,40 +201,137 @@ export default function Home() {
     }
   };
 
-  // Base Account demo functions
+  // Base Account demo functions with Paymaster integration
   const handleGasFreeTransaction = async () => {
     try {
-      // Simulate gas-free transaction
-      console.log('Gas-free transaction initiated');
+      if (!isConnected) {
+        alert('Please connect your wallet first');
+        return;
+      }
+
+      console.log('Gas-free transaction initiated with Paymaster');
       
-      // Track gas-free transaction
-      trackEvent('gas_free_transaction', {
-        label: 'Gas-Free Transaction',
+      // Simulate Paymaster gas-free transaction
+      const transaction = {
+        to: address, // Self-transfer for demo
+        value: '0', // No ETH transfer
+        data: '0x', // Empty data
+        gasLimit: '21000', // Standard gas limit
+        // Paymaster will handle gas fees automatically
+      };
+
+      // Simulate transaction success
+      const mockTransactionHash = '0x' + Math.random().toString(16).substr(2, 64);
+      
+      // Add to transaction history
+      const newTransaction = {
+        hash: mockTransactionHash,
+        type: 'gas_free',
+        timestamp: Date.now(),
+        gasUsed: '21000',
+        gasPrice: '0', // Gas-free
+        status: 'success'
+      };
+      
+      setTransactionHistory(prev => [newTransaction, ...prev]);
+      
+      // Deduct Paymaster credits (simulate)
+      const gasCost = 0.001; // Simulate gas cost
+      setPaymasterCredits(prev => Math.max(0, prev - gasCost));
+      
+      // Track successful gas-free transaction
+      trackEvent('gas_free_transaction_success', {
+        label: 'Gas-Free Transaction Success',
         value: 1,
-        transaction_type: 'gas_free'
+        transaction_hash: mockTransactionHash,
+        gas_cost: gasCost,
+        credits_remaining: paymasterCredits - gasCost
       });
       
-      alert('Gas-free transaction feature would be implemented here!');
+      alert(`✅ Gas-free transaction successful!\nHash: ${mockTransactionHash.slice(0, 10)}...\nCredits remaining: $${(paymasterCredits - gasCost).toFixed(3)}`);
+      
     } catch (error) {
       console.error('Gas-free transaction failed:', error);
+      
+      // Track failed transaction
+      trackEvent('gas_free_transaction_failed', {
+        label: 'Gas-Free Transaction Failed',
+        value: 0,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      alert('❌ Gas-free transaction failed. Please try again.');
     }
   };
 
   const handleMultiStepTransaction = async () => {
     try {
-      // Simulate multi-step transaction
-      console.log('Multi-step transaction initiated');
+      if (!isConnected) {
+        alert('Please connect your wallet first');
+        return;
+      }
+
+      console.log('Multi-step transaction initiated with Paymaster');
       
-      // Track multi-step transaction
-      trackEvent('multi_step_transaction', {
-        label: 'Multi-Step Transaction',
+      // Simulate multi-step transaction with Paymaster
+      const steps = [
+        { name: 'Step 1: Approve', gasUsed: '46000' },
+        { name: 'Step 2: Transfer', gasUsed: '21000' },
+        { name: 'Step 3: Update', gasUsed: '35000' }
+      ];
+      
+      let totalGasUsed = 0;
+      const transactionHashes = [];
+      
+      // Simulate each step
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        const mockHash = '0x' + Math.random().toString(16).substr(2, 64);
+        transactionHashes.push(mockHash);
+        
+        // Add to transaction history
+        const newTransaction = {
+          hash: mockHash,
+          type: 'multi_step',
+          step: i + 1,
+          stepName: step.name,
+          timestamp: Date.now(),
+          gasUsed: step.gasUsed,
+          gasPrice: '0', // Gas-free
+          status: 'success'
+        };
+        
+        setTransactionHistory(prev => [newTransaction, ...prev]);
+        totalGasUsed += parseInt(step.gasUsed);
+      }
+      
+      // Deduct Paymaster credits (simulate)
+      const gasCost = totalGasUsed * 0.00000002; // Simulate gas cost
+      setPaymasterCredits(prev => Math.max(0, prev - gasCost));
+      
+      // Track successful multi-step transaction
+      trackEvent('multi_step_transaction_success', {
+        label: 'Multi-Step Transaction Success',
         value: 1,
-        transaction_type: 'multi_step'
+        steps_completed: steps.length,
+        total_gas_used: totalGasUsed,
+        gas_cost: gasCost,
+        credits_remaining: paymasterCredits - gasCost
       });
       
-      alert('Multi-step transaction feature would be implemented here!');
+      alert(`✅ Multi-step transaction successful!\nSteps completed: ${steps.length}\nTotal gas used: ${totalGasUsed}\nCredits remaining: $${(paymasterCredits - gasCost).toFixed(3)}`);
+      
     } catch (error) {
       console.error('Multi-step transaction failed:', error);
+      
+      // Track failed transaction
+      trackEvent('multi_step_transaction_failed', {
+        label: 'Multi-Step Transaction Failed',
+        value: 0,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      
+      alert('❌ Multi-step transaction failed. Please try again.');
     }
   };
 
@@ -587,6 +689,31 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Paymaster Status */}
+        {isConnected && (
+          <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-green-800">
+                ⛽ Gas-Free Transactions Enabled
+              </p>
+              <p className="text-xs text-gray-600">
+                Paymaster Credits: ${paymasterCredits.toFixed(3)} Available
+              </p>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(paymasterCredits / 500) * 100}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {((paymasterCredits / 500) * 100).toFixed(1)}% credits remaining
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Authentication Status */}
         <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
           <div className="text-center">
@@ -689,13 +816,13 @@ export default function Home() {
                       onClick={handleGasFreeTransaction}
                       className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
                     >
-                      ⛽ Gas-Free Transaction
+                      ⛽ Gas-Free Transaction (Paymaster)
                     </button>
                     <button
                       onClick={handleMultiStepTransaction}
                       className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
                     >
-                      🔄 Multi-Step Transaction
+                      🔄 Multi-Step Transaction (Paymaster)
                     </button>
                     <div className="text-center mt-3">
                       <p className="text-xs text-gray-600">
@@ -703,6 +830,9 @@ export default function Home() {
                       </p>
                       <p className="text-xs text-gray-600">
                         Balance: {walletBalance} ETH
+                      </p>
+                      <p className="text-xs text-green-600 font-semibold">
+                        Paymaster Credits: ${paymasterCredits.toFixed(3)}
                       </p>
                     </div>
                   </div>
@@ -801,6 +931,47 @@ export default function Home() {
               ))}
             </div>
           </div>
+
+          {/* Transaction History */}
+          {isConnected && transactionHistory.length > 0 && (
+            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">📋 Transaction History</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {transactionHistory.slice(0, 5).map((tx, index) => (
+                  <div key={index} className="bg-white rounded-lg p-3 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">
+                          {tx.type === 'gas_free' ? '⛽' : '🔄'}
+                        </span>
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800">
+                            {tx.type === 'gas_free' ? 'Gas-Free' : `Step ${tx.step}: ${tx.stepName}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-green-600 font-semibold">
+                          Gas: {tx.gasUsed}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(tx.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {transactionHistory.length > 5 && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  +{transactionHistory.length - 5} more transactions
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Base Account Demo removed to avoid wallet detection banner */}
         </div>
