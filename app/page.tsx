@@ -2,10 +2,7 @@
 import { useEffect, useState } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import Image from "next/image";
-import { BaseAccountFeatures, GasFreeButton, MultiStepButton } from '../components/BaseAccountFeatures';
-import { useGasFreeTransaction } from '../lib/sponsored-transactions';
-import { useMultiStepTransaction } from '../lib/transaction-batching';
-import { useBaseAccountFeatures } from '../lib/base-account';
+// Base Account features removed to avoid wallet detection banner
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -17,6 +14,37 @@ export default function Home() {
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBaseAccountDemo, setShowBaseAccountDemo] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([
+    { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉" },
+    { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥" },
+    { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑" },
+    { fid: 22222, username: "WingRider", score: 850, avatar: "🦅" },
+    { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️" }
+  ]);
+  const [dailyChallenge, setDailyChallenge] = useState({
+    id: 1,
+    title: "Dragon Tamer",
+    description: "Score 500 points in a single game",
+    target: 500,
+    reward: "🏆 Dragon Tamer Badge",
+    completed: false,
+    progress: 0
+  });
+  const [achievements, setAchievements] = useState([
+    { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
+    { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
+    { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
+    { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
+    { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
+  ]);
+  const [gameStats, setGameStats] = useState({
+    gamesPlayed: 0,
+    totalScore: 0,
+    gamesShared: 0
+  });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [showAchievement, setShowAchievement] = useState<any>(null);
   
   // Context state
   const [isInMiniApp, setIsInMiniApp] = useState(false);
@@ -30,10 +58,7 @@ export default function Home() {
   const [authenticatedUser, setAuthenticatedUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Base Account features
-  const { capabilities } = useBaseAccountFeatures();
-  const { executeGasFreeTransaction, isGasFreeAvailable } = useGasFreeTransaction(capabilities);
-  const { executeMultiStepTransaction, isMultiStepAvailable } = useMultiStepTransaction(capabilities);
+  // Base Account features removed to avoid wallet detection banner
 
   const handleShare = async () => {
     try {
@@ -45,6 +70,30 @@ export default function Home() {
         text: shareText,
         embeds: ['https://dragman.xyz']
       });
+      
+      // Update stats
+      setGameStats(prev => ({
+        ...prev,
+        gamesShared: prev.gamesShared + 1
+      }));
+
+      // Track sharing event
+      trackEvent('score_shared', {
+        label: 'Score Shared',
+        value: score,
+        high_score: score > highScore,
+        games_shared: gameStats.gamesShared + 1
+      });
+      
+      // Check Social Butterfly achievement
+      const newAchievements = [...achievements];
+      if (!newAchievements[3].unlocked) {
+        newAchievements[3].unlocked = true;
+        setAchievements(newAchievements);
+        setShowAchievement(newAchievements[3]);
+        playSound('achievement');
+        setTimeout(() => setShowAchievement(null), 3000);
+      }
     } catch (error) {
       console.error('Failed to share:', error);
     }
@@ -92,53 +141,165 @@ export default function Home() {
     console.log('Signed out');
   };
 
-  const handleGasFreeDemo = async () => {
-    try {
-      // Demo gas-free transaction (this would be a real contract in production)
-      console.log('Executing gas-free transaction demo...');
-      // await executeGasFreeTransaction('0x...', contractAbi, 'mint', []);
-      alert('Gas-free transaction demo completed! (In production, this would mint an NFT)');
-    } catch (error) {
-      console.error('Gas-free transaction failed:', error);
-      alert('Gas-free transaction failed. Check console for details.');
+  // Base Account demo functions removed to avoid wallet detection banner
+
+  // Sound effects
+  const playSound = (type: string) => {
+    if (typeof window !== 'undefined' && window.AudioContext) {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      switch (type) {
+        case 'tap':
+          oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+          gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.1);
+          break;
+        case 'score':
+          oscillator.frequency.setValueAtTime(1200, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(1400, audioContext.currentTime + 0.1);
+          gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.2);
+          break;
+        case 'achievement':
+          oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+          oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+          oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+          gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + 0.3);
+          break;
+      }
     }
   };
 
-  const handleMultiStepDemo = async () => {
-    try {
-      // Demo multi-step transaction (this would be real transactions in production)
-      console.log('Executing multi-step transaction demo...');
-      // await executeMultiStepTransaction([
-      //   { to: '0x...', data: '0x...', value: 0n },
-      //   { to: '0x...', data: '0x...', value: 0n },
-      // ]);
-      alert('Multi-step transaction demo completed! (In production, this would execute multiple operations)');
-    } catch (error) {
-      console.error('Multi-step transaction failed:', error);
-      alert('Multi-step transaction failed. Check console for details.');
+  // Analytics tracking
+  const trackEvent = (eventName: string, properties: any = {}) => {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', eventName, {
+        event_category: 'Dragman Mini App',
+        event_label: properties.label || '',
+        value: properties.value || 0,
+        ...properties
+      });
     }
+    console.log('Analytics Event:', eventName, properties);
+  };
+
+  // Achievement checking
+  const checkAchievements = (newScore: number) => {
+    const newAchievements = [...achievements];
+    let hasNewAchievement = false;
+
+    // First Steps
+    if (gameStats.gamesPlayed === 0 && !newAchievements[0].unlocked) {
+      newAchievements[0].unlocked = true;
+      hasNewAchievement = true;
+    }
+
+    // Dragon Slayer
+    if (newScore >= 1000 && !newAchievements[1].unlocked) {
+      newAchievements[1].unlocked = true;
+      hasNewAchievement = true;
+    }
+
+    // Speed Demon
+    if (gameStats.gamesPlayed >= 9 && !newAchievements[2].unlocked) {
+      newAchievements[2].unlocked = true;
+      hasNewAchievement = true;
+    }
+
+    // Legend
+    if (newScore >= 5000 && !newAchievements[4].unlocked) {
+      newAchievements[4].unlocked = true;
+      hasNewAchievement = true;
+    }
+
+    if (hasNewAchievement) {
+      const latestAchievement = newAchievements.find(a => a.unlocked && !achievements.find(old => old.id === a.id)?.unlocked);
+      if (latestAchievement) {
+        setShowAchievement(latestAchievement);
+        playSound('achievement');
+        
+        // Track achievement unlock
+        trackEvent('achievement_unlocked', {
+          label: latestAchievement.name,
+          value: latestAchievement.id,
+          achievement_type: latestAchievement.name
+        });
+        
+        setTimeout(() => setShowAchievement(null), 3000);
+      }
+    }
+
+    setAchievements(newAchievements);
   };
 
   const handlePlay = async () => {
     setIsPlaying(true);
+    setIsAnimating(true);
     
     // Trigger haptic feedback if available
     if (features?.haptics && navigator.vibrate) {
       navigator.vibrate(50); // Short vibration
     }
     
-    // Simulate scoring
+    // Simulate scoring with sound effects
     const interval = setInterval(() => {
-      setScore(prev => prev + 1);
+      setScore(prev => {
+        const newScore = prev + 1;
+        
+        // Play sound effects
+        if (newScore % 10 === 0) {
+          playSound('score');
+        } else {
+          playSound('tap');
+        }
+        
+        return newScore;
+      });
     }, 100);
     
     setTimeout(async () => {
       clearInterval(interval);
       setIsPlaying(false);
+      setIsAnimating(false);
+      
+      // Update stats
+      setGameStats(prev => ({
+        gamesPlayed: prev.gamesPlayed + 1,
+        totalScore: prev.totalScore + score + 1,
+        gamesShared: prev.gamesShared
+      }));
+
+      // Track game completion
+      trackEvent('game_completed', {
+        label: 'Game Finished',
+        value: score + 1,
+        high_score: score + 1 > highScore,
+        games_played: gameStats.gamesPlayed + 1
+      });
+      
+      // Check achievements
+      checkAchievements(score + 1);
+      
+      // Check daily challenge
+      if (score + 1 >= dailyChallenge.target && !dailyChallenge.completed) {
+        setDailyChallenge(prev => ({ ...prev, completed: true, progress: score + 1 }));
+      }
       
       // Update high score
-      if (score > highScore) {
-        setHighScore(score);
+      if (score + 1 > highScore) {
+        setHighScore(score + 1);
         
         // Trigger haptic feedback for new high score
         if (features?.haptics && navigator.vibrate) {
@@ -237,14 +398,15 @@ export default function Home() {
   }, []);
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
-      {/* Base Account Features */}
-      <BaseAccountFeatures />
-
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
         {/* Dragon Icon */}
         <div className="mb-6">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center mb-4">
-            <div className="text-white text-4xl">🐉</div>
+          <div className={`w-24 h-24 mx-auto bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center mb-4 transition-all duration-300 ${
+            isAnimating ? 'animate-pulse scale-110 shadow-2xl' : 'hover:scale-105 shadow-lg'
+          }`}>
+            <div className={`text-white text-4xl transition-all duration-300 ${
+              isAnimating ? 'animate-bounce' : ''
+            }`}>🐉</div>
           </div>
         </div>
 
@@ -336,10 +498,13 @@ export default function Home() {
         )}
 
         {/* Play Button */}
-        <button 
+        <button
           onClick={handlePlay}
           disabled={isPlaying}
-          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-4 focus:ring-purple-300"
+          aria-label={isPlaying ? 'Game in progress' : 'Start playing Dragman game'}
+          role="button"
+          tabIndex={0}
         >
           {isPlaying ? '🎮 Playing...' : '🎮 Play Now'}
         </button>
@@ -354,26 +519,109 @@ export default function Home() {
           </button>
         )}
 
-        {/* Base Account Demo Buttons */}
+        {/* New Features Buttons */}
         <div className="mt-6 space-y-3">
           <button
-            onClick={() => setShowBaseAccountDemo(!showBaseAccountDemo)}
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+            onClick={() => setShowLeaderboard(!showLeaderboard)}
+            className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-yellow-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
           >
-            🔧 Base Account Features
+            🏆 Leaderboard
           </button>
+          
+          {/* Base Account Features removed to avoid wallet detection banner */}
 
-          {showBaseAccountDemo && (
+          {/* Leaderboard Modal */}
+          {showLeaderboard && (
             <div className="space-y-2">
-              <GasFreeButton onClick={handleGasFreeDemo}>
-                Demo Gas-Free Transaction
-              </GasFreeButton>
-
-              <MultiStepButton onClick={handleMultiStepDemo}>
-                Demo Multi-Step Transaction
-              </MultiStepButton>
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏆 Leaderboard</h3>
+                <div className="space-y-2">
+                  {leaderboard.map((player, index) => (
+                    <div key={player.fid} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <span className="text-2xl">{player.avatar}</span>
+                        <div>
+                          <p className="font-semibold text-gray-800">{player.username}</p>
+                          <p className="text-xs text-gray-500">FID: {player.fid}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800">{player.score}</p>
+                        <p className="text-xs text-gray-500">#{index + 1}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Daily Challenge */}
+          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">🎯 Daily Challenge</h3>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-gray-700">{dailyChallenge.title}</p>
+              <p className="text-xs text-gray-600 mb-2">{dailyChallenge.description}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div 
+                  className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((dailyChallenge.progress / dailyChallenge.target) * 100, 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-600">
+                {dailyChallenge.progress}/{dailyChallenge.target} points
+                {dailyChallenge.completed && <span className="text-green-600 font-semibold"> ✅ Completed!</span>}
+              </p>
+              {dailyChallenge.completed && (
+                <p className="text-sm font-semibold text-green-600 mt-1">{dailyChallenge.reward}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Game Stats */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">📊 Your Stats</h3>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <p className="text-2xl font-bold text-purple-600">{gameStats.gamesPlayed}</p>
+                <p className="text-xs text-gray-600">Games</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <p className="text-2xl font-bold text-blue-600">{gameStats.totalScore}</p>
+                <p className="text-xs text-gray-600">Total Score</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm">
+                <p className="text-2xl font-bold text-green-600">{gameStats.gamesShared}</p>
+                <p className="text-xs text-gray-600">Shared</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievements */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+            <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏅 Achievements</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {achievements.map((achievement) => (
+                <div 
+                  key={achievement.id} 
+                  className={`bg-white rounded-lg p-3 shadow-sm text-center ${
+                    achievement.unlocked ? 'opacity-100' : 'opacity-50'
+                  }`}
+                >
+                  <p className="text-2xl mb-1">{achievement.icon}</p>
+                  <p className="text-xs font-semibold text-gray-800">{achievement.name}</p>
+                  <p className="text-xs text-gray-600">{achievement.description}</p>
+                  {achievement.unlocked && (
+                    <div className="mt-1">
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Unlocked!</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Base Account Demo removed to avoid wallet detection banner */}
         </div>
 
         {/* Features */}
@@ -420,6 +668,46 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Achievement Notification */}
+      {showAchievement && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 max-w-sm w-full text-center animate-bounce">
+            <div className="text-6xl mb-4">{showAchievement.icon}</div>
+            <h3 className="text-2xl font-bold text-white mb-2">Achievement Unlocked!</h3>
+            <p className="text-lg font-semibold text-white mb-2">{showAchievement.name}</p>
+            <p className="text-sm text-yellow-100 mb-4">{showAchievement.description}</p>
+            <div className="bg-white bg-opacity-20 rounded-lg p-3">
+              <p className="text-sm text-white">🎉 Congratulations! 🎉</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading States */}
+      {isPlaying && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
+          <div className="bg-white rounded-lg p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <p className="text-gray-700 font-semibold">Playing...</p>
+            <p className="text-sm text-gray-500">Tap the dragon to score!</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Boundary */}
+      <div className="error-boundary" style={{ display: 'none' }}>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 m-4">
+          <h3 className="text-red-800 font-semibold">Something went wrong</h3>
+          <p className="text-red-600 text-sm">Please refresh the page and try again.</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
