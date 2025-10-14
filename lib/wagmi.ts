@@ -9,9 +9,9 @@ export const config = createConfig({
   chains: [base],
   connectors: [
     injected(),
-    walletConnect({ 
-      projectId: 'your-walletconnect-project-id' // Replace with your actual project ID
-    }),
+    // walletConnect({ 
+    //   projectId: 'your-walletconnect-project-id' // Uncomment and add your project ID if needed
+    // }),
   ],
   transports: {
     [base.id]: http('https://mainnet.base.org'),
