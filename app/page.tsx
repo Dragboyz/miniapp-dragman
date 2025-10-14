@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
 import Image from "next/image";
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
@@ -45,6 +45,16 @@ export default function Home() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [showAchievement, setShowAchievement] = useState<any>(null);
   
+  // Enhanced game features
+  const [combo, setCombo] = useState({ current: 0, max: 0, multiplier: 1, timer: 0 });
+  const [powerUps, setPowerUps] = useState<any[]>([]);
+  const [particles, setParticles] = useState<any[]>([]);
+  const [isBossBattle, setIsBossBattle] = useState(false);
+  const [bossHealth, setBossHealth] = useState(0);
+  const [dragonLevel, setDragonLevel] = useState(1);
+  const [dragonExp, setDragonExp] = useState(0);
+  const gameRef = useRef<HTMLDivElement>(null);
+  
   // Context state
   const [isInMiniApp, setIsInMiniApp] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -73,6 +83,127 @@ export default function Home() {
   const [paymasterCredits, setPaymasterCredits] = useState<number>(500);
   const [gasFreeEnabled, setGasFreeEnabled] = useState<boolean>(true);
   const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
+
+  // Enhanced haptic feedback (using browser vibration API)
+  const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
+    if ('vibrate' in navigator) {
+      const patterns = {
+        light: [10],
+        medium: [20],
+        heavy: [50]
+      };
+      navigator.vibrate(patterns[type]);
+    }
+  }, []);
+
+  // Particle system
+  const createParticle = useCallback((x: number, y: number, type: string) => {
+    const particle = {
+      id: Date.now() + Math.random(),
+      x,
+      y,
+      type,
+      life: 60,
+      maxLife: 60,
+      velocity: {
+        x: (Math.random() - 0.5) * 10,
+        y: (Math.random() - 0.5) * 10
+      }
+    };
+    setParticles(prev => [...prev, particle]);
+  }, []);
+
+  // Enhanced dragon tap handler
+  const handleDragonTap = useCallback((event: React.MouseEvent) => {
+    if (!isPlaying) return;
+
+    const rect = gameRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    // Calculate combo
+    const now = Date.now();
+    if (combo.timer > now - 1000) {
+      setCombo(prev => ({
+        ...prev,
+        current: prev.current + 1,
+        max: Math.max(prev.max, prev.current + 1),
+        multiplier: Math.min(5, Math.floor(prev.current / 5) + 1),
+        timer: now + 2000
+      }));
+    } else {
+      setCombo(prev => ({
+        ...prev,
+        current: 1,
+        multiplier: 1,
+        timer: now + 2000
+      }));
+    }
+
+    // Calculate score with combo multiplier
+    const baseScore = 10 * dragonLevel;
+    const comboBonus = combo.current * 2;
+    const totalScore = Math.floor((baseScore + comboBonus) * combo.multiplier);
+
+    setScore(prev => prev + totalScore);
+
+    // Create particles based on combo level
+    const particleCount = Math.min(combo.current, 10);
+    for (let i = 0; i < particleCount; i++) {
+      setTimeout(() => {
+        createParticle(x, y, combo.multiplier > 3 ? 'gold' : 'fire');
+      }, i * 50);
+    }
+
+    // Haptic feedback based on combo
+    if (combo.multiplier >= 3) {
+      triggerHaptic('heavy');
+    } else if (combo.multiplier >= 2) {
+      triggerHaptic('medium');
+    } else {
+      triggerHaptic('light');
+    }
+
+    // Check for power-up activation
+    if (Math.random() < 0.1) {
+      activateRandomPowerUp();
+    }
+
+    // Check for boss battle
+    if (score > 0 && score % 1000 === 0) {
+      startBossBattle();
+    }
+  }, [isPlaying, combo, dragonLevel, score, createParticle, triggerHaptic]);
+
+  // Power-up system
+  const activateRandomPowerUp = useCallback(() => {
+    const types = ['fire', 'lightning', 'ice', 'combo'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    const powerUp = {
+      id: Date.now().toString(),
+      type,
+      duration: 5000,
+      multiplier: type === 'combo' ? 3 : 2,
+      active: true
+    };
+
+    setPowerUps(prev => [...prev, powerUp]);
+
+    // Auto-remove after duration
+    setTimeout(() => {
+      setPowerUps(prev => prev.filter(p => p.id !== powerUp.id));
+    }, powerUp.duration);
+  }, []);
+
+  // Boss battle system
+  const startBossBattle = useCallback(() => {
+    setIsBossBattle(true);
+    setBossHealth(100);
+    triggerHaptic('heavy');
+  }, [triggerHaptic]);
 
   const handleShare = async () => {
     try {
