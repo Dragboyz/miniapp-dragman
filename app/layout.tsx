@@ -54,7 +54,7 @@ export const metadata: Metadata = {
   other: {
     'fc:miniapp': JSON.stringify({
       "version": "next",
-      "imageUrl": "https://dragman.xyz/preview.png",
+      "imageUrl": "https://dragman.xyz/preview.jpg",
       "button": {
         "title": "Play Dragman",
         "action": {
@@ -80,8 +80,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Dragman" />
-        <link rel="apple-touch-icon" href="/icon.png" />
-        <link rel="icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/icon.jpg" />
+        <link rel="icon" href="/icon.jpg" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

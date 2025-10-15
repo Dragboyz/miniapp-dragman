@@ -11,7 +11,7 @@
     "version": "1",
     "name": "Dragman Mini App",
     "homeUrl": "https://dragman.xyz",
-    "iconUrl": "https://dragman.xyz/icon.png",
+    "iconUrl": "https://dragman.xyz/icon.jpg",
     "splashImageUrl": "https://dragman.xyz/splash.png",
     "splashBackgroundColor": "#667eea",
     "webhookUrl": "https://dragman.xyz/api/webhook",
@@ -20,18 +20,18 @@
     "screenshotUrls": [
       "https://dragman.xyz/screenshot1.png",
       "https://dragman.xyz/screenshot2.png",
-      "https://dragman.xyz/screenshot3.png"
+      "https://dragman.xyz/screenshot3.jpg"
     ],
     "primaryCategory": "games",
     "tags": ["dragon", "game", "mini", "base", "social"],
-    "heroImageUrl": "https://dragman.xyz/hero.png",
+    "heroImageUrl": "https://dragman.xyz/hero.jpg",
     "tagline": "Play instantly",
     "ogTitle": "Dragman Mini App",
     "ogDescription": "Challenge friends in this exciting dragman game!",
     "ogImageUrl": "https://dragman.xyz/og-image.png",
-    "imageUrl": "https://dragman.xyz/preview.png",
+    "imageUrl": "https://dragman.xyz/preview.jpg",
     "buttonTitle": "Play Dragman",
     "castShareUrl": "https://dragman.xyz/share",
-    "noindex": true
+    "noindex": false
   }
 }

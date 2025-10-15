@@ -10,17 +10,47 @@ export const dynamic = 'force-dynamic';
 export default function Home() {
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScore] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('dragman_highscore') || '0');
+    }
+    return 0;
+  });
   const [isFirstTime, setIsFirstTime] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [leaderboard, setLeaderboard] = useState([
-    { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉" },
-    { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥" },
-    { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑" },
-    { fid: 22222, username: "WingRider", score: 850, avatar: "🦅" },
-    { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️" }
-  ]);
+  const [leaderboard, setLeaderboard] = useState(() => {
+    const defaultLeaderboard = [
+      { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
+      { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
+      { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
+      { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
+      { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
+    ];
+    
+    // Add current user to leaderboard if they have a score
+    if (typeof window !== 'undefined') {
+      const savedHighScore = parseInt(localStorage.getItem('dragman_highscore') || '0');
+      if (savedHighScore > 0) {
+        const currentUser = {
+          fid: user?.fid || 99999,
+          username: user?.displayName || user?.username || "You",
+          score: savedHighScore,
+          avatar: "🐲",
+          isCurrentUser: true
+        };
+        
+        // Insert user in correct position
+        const updatedLeaderboard = [...defaultLeaderboard, currentUser]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 6); // Keep top 6
+        
+        return updatedLeaderboard;
+      }
+    }
+    
+    return defaultLeaderboard;
+  });
   const [dailyChallenge, setDailyChallenge] = useState({
     id: 1,
     title: "Dragon Tamer",
@@ -30,17 +60,33 @@ export default function Home() {
     completed: false,
     progress: 0
   });
-  const [achievements, setAchievements] = useState([
-    { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
-    { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
-    { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
-    { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
-    { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
-  ]);
-  const [gameStats, setGameStats] = useState({
-    gamesPlayed: 0,
-    totalScore: 0,
-    gamesShared: 0
+  const [achievements, setAchievements] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dragman_achievements');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    }
+    return [
+      { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
+      { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
+      { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
+      { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
+      { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
+    ];
+  });
+  const [gameStats, setGameStats] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('dragman_stats');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    }
+    return {
+      gamesPlayed: 0,
+      totalScore: 0,
+      gamesShared: 0
+    };
   });
   const [isAnimating, setIsAnimating] = useState(false);
   const [showAchievement, setShowAchievement] = useState<any>(null);
@@ -79,10 +125,7 @@ export default function Home() {
   const [walletBalance, setWalletBalance] = useState<string>('0');
   const [networkName, setNetworkName] = useState<string>('Unknown');
   
-  // Paymaster features
-  const [paymasterCredits, setPaymasterCredits] = useState<number>(500);
-  const [gasFreeEnabled, setGasFreeEnabled] = useState<boolean>(true);
-  const [transactionHistory, setTransactionHistory] = useState<any[]>([]);
+  // Removed paymaster features as requested
 
   // Enhanced haptic feedback (using browser vibration API)
   const triggerHaptic = useCallback((type: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -95,6 +138,77 @@ export default function Home() {
       navigator.vibrate(patterns[type]);
     }
   }, []);
+
+  // Save data to localStorage
+  const saveGameData = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dragman_stats', JSON.stringify(gameStats));
+      localStorage.setItem('dragman_achievements', JSON.stringify(achievements));
+    }
+  }, [gameStats, achievements]);
+
+  // Manual reset function
+  const handleResetData = useCallback(() => {
+    if (confirm('Are you sure you want to reset all your progress? This cannot be undone!')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('dragman_highscore');
+        localStorage.removeItem('dragman_stats');
+        localStorage.removeItem('dragman_achievements');
+      }
+      
+      setHighScore(0);
+      setGameStats({
+        gamesPlayed: 0,
+        totalScore: 0,
+        gamesShared: 0
+      });
+      setAchievements([
+        { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
+        { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
+        { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
+        { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
+        { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
+      ]);
+      setScore(0);
+      
+      // Reset leaderboard
+      setLeaderboard([
+        { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
+        { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
+        { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
+        { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
+        { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
+      ]);
+      
+      alert('All progress has been reset!');
+    }
+  }, []);
+
+  // Update leaderboard with current user's score
+  const updateLeaderboard = useCallback((newScore: number) => {
+    const defaultLeaderboard = [
+      { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
+      { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
+      { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
+      { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
+      { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
+    ];
+    
+    const currentUser = {
+      fid: user?.fid || 99999,
+      username: user?.displayName || user?.username || "You",
+      score: newScore,
+      avatar: "🐲",
+      isCurrentUser: true
+    };
+    
+    // Insert user in correct position
+    const updatedLeaderboard = [...defaultLeaderboard, currentUser]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6); // Keep top 6
+    
+    setLeaderboard(updatedLeaderboard);
+  }, [user]);
 
   // Particle system
   const createParticle = useCallback((x: number, y: number, type: string) => {
@@ -217,7 +331,7 @@ export default function Home() {
       });
       
       // Update stats
-      setGameStats(prev => ({
+      setGameStats((prev: any) => ({
         ...prev,
         gamesShared: prev.gamesShared + 1
       }));
@@ -332,139 +446,7 @@ export default function Home() {
     }
   };
 
-  // Base Account demo functions with Paymaster integration
-  const handleGasFreeTransaction = async () => {
-    try {
-      if (!isConnected) {
-        alert('Please connect your wallet first');
-        return;
-      }
-
-      console.log('Gas-free transaction initiated with Paymaster');
-      
-      // Simulate Paymaster gas-free transaction
-      const transaction = {
-        to: address, // Self-transfer for demo
-        value: '0', // No ETH transfer
-        data: '0x', // Empty data
-        gasLimit: '21000', // Standard gas limit
-        // Paymaster will handle gas fees automatically
-      };
-
-      // Simulate transaction success
-      const mockTransactionHash = '0x' + Math.random().toString(16).substr(2, 64);
-      
-      // Add to transaction history
-      const newTransaction = {
-        hash: mockTransactionHash,
-        type: 'gas_free',
-        timestamp: Date.now(),
-        gasUsed: '21000',
-        gasPrice: '0', // Gas-free
-        status: 'success'
-      };
-      
-      setTransactionHistory(prev => [newTransaction, ...prev]);
-      
-      // Deduct Paymaster credits (simulate)
-      const gasCost = 0.001; // Simulate gas cost
-      setPaymasterCredits(prev => Math.max(0, prev - gasCost));
-      
-      // Track successful gas-free transaction
-      trackEvent('gas_free_transaction_success', {
-        label: 'Gas-Free Transaction Success',
-        value: 1,
-        transaction_hash: mockTransactionHash,
-        gas_cost: gasCost,
-        credits_remaining: paymasterCredits - gasCost
-      });
-      
-      alert(`✅ Gas-free transaction successful!\nHash: ${mockTransactionHash.slice(0, 10)}...\nCredits remaining: $${(paymasterCredits - gasCost).toFixed(3)}`);
-      
-    } catch (error) {
-      console.error('Gas-free transaction failed:', error);
-      
-      // Track failed transaction
-      trackEvent('gas_free_transaction_failed', {
-        label: 'Gas-Free Transaction Failed',
-        value: 0,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      
-      alert('❌ Gas-free transaction failed. Please try again.');
-    }
-  };
-
-  const handleMultiStepTransaction = async () => {
-    try {
-      if (!isConnected) {
-        alert('Please connect your wallet first');
-        return;
-      }
-
-      console.log('Multi-step transaction initiated with Paymaster');
-      
-      // Simulate multi-step transaction with Paymaster
-      const steps = [
-        { name: 'Step 1: Approve', gasUsed: '46000' },
-        { name: 'Step 2: Transfer', gasUsed: '21000' },
-        { name: 'Step 3: Update', gasUsed: '35000' }
-      ];
-      
-      let totalGasUsed = 0;
-      const transactionHashes = [];
-      
-      // Simulate each step
-      for (let i = 0; i < steps.length; i++) {
-        const step = steps[i];
-        const mockHash = '0x' + Math.random().toString(16).substr(2, 64);
-        transactionHashes.push(mockHash);
-        
-        // Add to transaction history
-        const newTransaction = {
-          hash: mockHash,
-          type: 'multi_step',
-          step: i + 1,
-          stepName: step.name,
-          timestamp: Date.now(),
-          gasUsed: step.gasUsed,
-          gasPrice: '0', // Gas-free
-          status: 'success'
-        };
-        
-        setTransactionHistory(prev => [newTransaction, ...prev]);
-        totalGasUsed += parseInt(step.gasUsed);
-      }
-      
-      // Deduct Paymaster credits (simulate)
-      const gasCost = totalGasUsed * 0.00000002; // Simulate gas cost
-      setPaymasterCredits(prev => Math.max(0, prev - gasCost));
-      
-      // Track successful multi-step transaction
-      trackEvent('multi_step_transaction_success', {
-        label: 'Multi-Step Transaction Success',
-        value: 1,
-        steps_completed: steps.length,
-        total_gas_used: totalGasUsed,
-        gas_cost: gasCost,
-        credits_remaining: paymasterCredits - gasCost
-      });
-      
-      alert(`✅ Multi-step transaction successful!\nSteps completed: ${steps.length}\nTotal gas used: ${totalGasUsed}\nCredits remaining: $${(paymasterCredits - gasCost).toFixed(3)}`);
-      
-    } catch (error) {
-      console.error('Multi-step transaction failed:', error);
-      
-      // Track failed transaction
-      trackEvent('multi_step_transaction_failed', {
-        label: 'Multi-Step Transaction Failed',
-        value: 0,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      
-      alert('❌ Multi-step transaction failed. Please try again.');
-    }
-  };
+  // Removed paymaster functions as requested
 
   // Sound effects
   const playSound = (type: string) => {
@@ -548,7 +530,7 @@ export default function Home() {
     }
 
     if (hasNewAchievement) {
-      const latestAchievement = newAchievements.find(a => a.unlocked && !achievements.find(old => old.id === a.id)?.unlocked);
+      const latestAchievement = newAchievements.find(a => a.unlocked && !achievements.find((old: any) => old.id === a.id)?.unlocked);
       if (latestAchievement) {
         setShowAchievement(latestAchievement);
         playSound('achievement');
@@ -565,6 +547,11 @@ export default function Home() {
     }
 
     setAchievements(newAchievements);
+    
+    // Save achievements to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dragman_achievements', JSON.stringify(newAchievements));
+    }
   };
 
   const handlePlay = async () => {
@@ -598,11 +585,17 @@ export default function Home() {
       setIsAnimating(false);
       
       // Update stats
-      setGameStats(prev => ({
-        gamesPlayed: prev.gamesPlayed + 1,
-        totalScore: prev.totalScore + score + 1,
-        gamesShared: prev.gamesShared
-      }));
+      const newStats = {
+        gamesPlayed: gameStats.gamesPlayed + 1,
+        totalScore: gameStats.totalScore + score + 1,
+        gamesShared: gameStats.gamesShared
+      };
+      setGameStats(newStats);
+      
+      // Save stats to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('dragman_stats', JSON.stringify(newStats));
+      }
 
       // Track game completion
       trackEvent('game_completed', {
@@ -622,7 +615,16 @@ export default function Home() {
       
       // Update high score
       if (score + 1 > highScore) {
-        setHighScore(score + 1);
+        const newHighScore = score + 1;
+        setHighScore(newHighScore);
+        
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('dragman_highscore', newHighScore.toString());
+        }
+        
+        // Update leaderboard with new high score
+        updateLeaderboard(newHighScore);
         
         // Trigger haptic feedback for new high score
         if (features?.haptics && navigator.vibrate) {
@@ -661,10 +663,7 @@ export default function Home() {
         setShowOnboarding(true);
       }
       
-      // Trigger share prompt after game
-      if (score > 0) {
-        handleShare();
-      }
+      // Share is now manual only - no auto-share
     }, 3000);
   };
 
@@ -820,30 +819,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Paymaster Status */}
-        {isConnected && (
-          <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-green-800">
-                ⛽ Gas-Free Transactions Enabled
-              </p>
-              <p className="text-xs text-gray-600">
-                Paymaster Credits: ${paymasterCredits.toFixed(3)} Available
-              </p>
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(paymasterCredits / 500) * 100}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {((paymasterCredits / 500) * 100).toFixed(1)}% credits remaining
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Removed paymaster status as requested */}
 
         {/* Authentication Status */}
         <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
@@ -920,6 +896,14 @@ export default function Home() {
           </button>
         )}
 
+        {/* Reset Data Button */}
+        <button 
+          onClick={handleResetData}
+          className="w-full mt-3 bg-gradient-to-r from-red-500 to-pink-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+        >
+          🔄 Reset All Progress
+        </button>
+
         {/* New Features Buttons */}
         <div className="mt-6 space-y-3">
           <button
@@ -929,48 +913,7 @@ export default function Home() {
             🏆 Leaderboard
           </button>
 
-          {/* Base Account Features */}
-          {isConnected && (
-            <div className="space-y-2">
-              <button
-                onClick={() => setShowBaseAccountDemo(!showBaseAccountDemo)}
-                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-              >
-                🏦 Base Account Features
-              </button>
-              
-              {showBaseAccountDemo && (
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏦 Base Account Features</h3>
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleGasFreeTransaction}
-                      className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-                    >
-                      ⛽ Gas-Free Transaction (Paymaster)
-                    </button>
-                    <button
-                      onClick={handleMultiStepTransaction}
-                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold py-2 px-4 rounded-lg hover:from-blue-600 hover:to-cyan-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
-                    >
-                      🔄 Multi-Step Transaction (Paymaster)
-                    </button>
-                    <div className="text-center mt-3">
-                      <p className="text-xs text-gray-600">
-                        Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Balance: {walletBalance} ETH
-                      </p>
-                      <p className="text-xs text-green-600 font-semibold">
-                        Paymaster Credits: ${paymasterCredits.toFixed(3)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {/* Removed Base Account Features as requested */}
 
           {/* Leaderboard Modal */}
           {showLeaderboard && (
@@ -979,16 +922,24 @@ export default function Home() {
                 <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏆 Leaderboard</h3>
                 <div className="space-y-2">
                   {leaderboard.map((player, index) => (
-                    <div key={player.fid} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
+                    <div key={player.fid} className={`flex items-center justify-between rounded-lg p-3 shadow-sm ${
+                      player.isCurrentUser 
+                        ? 'bg-gradient-to-r from-blue-100 to-purple-100 border-2 border-blue-300' 
+                        : 'bg-white'
+                    }`}>
                       <div className="flex items-center space-x-3">
                         <span className="text-2xl">{player.avatar}</span>
                         <div>
-                          <p className="font-semibold text-gray-800">{player.username}</p>
+                          <p className={`font-semibold ${player.isCurrentUser ? 'text-blue-800' : 'text-gray-800'}`}>
+                            {player.username} {player.isCurrentUser && '(You)'}
+                          </p>
                           <p className="text-xs text-gray-500">FID: {player.fid}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-gray-800">{player.score}</p>
+                        <p className={`font-bold ${player.isCurrentUser ? 'text-blue-800' : 'text-gray-800'}`}>
+                          {player.score}
+                        </p>
                         <p className="text-xs text-gray-500">#{index + 1}</p>
                       </div>
                     </div>
@@ -1043,7 +994,7 @@ export default function Home() {
           <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
             <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">🏅 Achievements</h3>
             <div className="grid grid-cols-2 gap-2">
-              {achievements.map((achievement) => (
+              {achievements.map((achievement: any) => (
                 <div 
                   key={achievement.id} 
                   className={`bg-white rounded-lg p-3 shadow-sm text-center ${
@@ -1063,46 +1014,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Transaction History */}
-          {isConnected && transactionHistory.length > 0 && (
-            <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">📋 Transaction History</h3>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {transactionHistory.slice(0, 5).map((tx, index) => (
-                  <div key={index} className="bg-white rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg">
-                          {tx.type === 'gas_free' ? '⛽' : '🔄'}
-                        </span>
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800">
-                            {tx.type === 'gas_free' ? 'Gas-Free' : `Step ${tx.step}: ${tx.stepName}`}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-green-600 font-semibold">
-                          Gas: {tx.gasUsed}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {new Date(tx.timestamp).toLocaleTimeString()}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {transactionHistory.length > 5 && (
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  +{transactionHistory.length - 5} more transactions
-                </p>
-              )}
-            </div>
-          )}
+          {/* Removed transaction history as requested */}
 
           {/* Base Account Demo removed to avoid wallet detection banner */}
         </div>
