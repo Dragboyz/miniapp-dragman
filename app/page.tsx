@@ -1,8 +1,72 @@
 'use client';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk';
+
+// Debug SDK import
+console.log('🔍 SDK imported:', sdk);
+console.log('🔍 SDK actions:', sdk?.actions);
+console.log('🔍 SDK actions ready:', sdk?.actions?.ready);
+
 import Image from "next/image";
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
+
+// Error Boundary Component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+            <div className="text-6xl mb-4">😵</div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Oops! Something went wrong</h1>
+            <p className="text-gray-600 mb-6">
+              The app encountered an error. Please refresh the page to try again.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-gradient-to-r from-red-500 to-pink-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200"
+            >
+              🔄 Refresh Page
+            </button>
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-sm text-gray-500">Error Details</summary>
+              <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
+                {this.state.error?.toString()}
+              </pre>
+            </details>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Note: ready() should be called AFTER the app is fully loaded and ready to display
+// This will be done in the useEffect after component mounts
 
 // Disable static generation for this page
 export const dynamic = 'force-dynamic';
@@ -11,8 +75,12 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [highScore, setHighScore] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return parseInt(localStorage.getItem('dragman_highscore') || '0');
+    try {
+      if (typeof window !== 'undefined') {
+        return parseInt(localStorage.getItem('dragman_highscore') || '0');
+      }
+    } catch (error) {
+      console.error('Error loading high score from localStorage:', error);
     }
     return 0;
   });
@@ -29,24 +97,28 @@ export default function Home() {
     ];
     
     // Add current user to leaderboard if they have a score
-    if (typeof window !== 'undefined') {
-      const savedHighScore = parseInt(localStorage.getItem('dragman_highscore') || '0');
-      if (savedHighScore > 0) {
-        const currentUser = {
-          fid: user?.fid || 99999,
-          username: user?.displayName || user?.username || "You",
-          score: savedHighScore,
-          avatar: "🐲",
-          isCurrentUser: true
-        };
-        
-        // Insert user in correct position
-        const updatedLeaderboard = [...defaultLeaderboard, currentUser]
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 6); // Keep top 6
-        
-        return updatedLeaderboard;
+    try {
+      if (typeof window !== 'undefined') {
+        const savedHighScore = parseInt(localStorage.getItem('dragman_highscore') || '0');
+        if (savedHighScore > 0) {
+          const currentUser = {
+            fid: 99999, // Use default FID since user might not be loaded yet
+            username: "You",
+            score: savedHighScore,
+            avatar: "🎮",
+            isCurrentUser: true
+          };
+          
+          // Insert user in correct position
+          const updatedLeaderboard = [...defaultLeaderboard, currentUser]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 6); // Keep top 6
+          
+          return updatedLeaderboard;
+        }
       }
+    } catch (error) {
+      console.error('Error initializing leaderboard:', error);
     }
     
     return defaultLeaderboard;
@@ -56,31 +128,39 @@ export default function Home() {
     title: "Dragon Tamer",
     description: "Score 500 points in a single game",
     target: 500,
-    reward: "🏆 Dragon Tamer Badge",
+    reward: "?? Dragon Tamer Badge",
     completed: false,
     progress: 0
   });
   const [achievements, setAchievements] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('dragman_achievements');
-      if (saved) {
-        return JSON.parse(saved);
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('dragman_achievements');
+        if (saved) {
+          return JSON.parse(saved);
+        }
       }
+    } catch (error) {
+      console.error('Error loading achievements from localStorage:', error);
     }
     return [
       { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
-      { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
+      { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "🐉", unlocked: false },
       { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
       { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
       { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
     ];
   });
   const [gameStats, setGameStats] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('dragman_stats');
-      if (saved) {
-        return JSON.parse(saved);
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('dragman_stats');
+        if (saved) {
+          return JSON.parse(saved);
+        }
       }
+    } catch (error) {
+      console.error('Error loading game stats from localStorage:', error);
     }
     return {
       gamesPlayed: 0,
@@ -150,64 +230,73 @@ export default function Home() {
   // Manual reset function
   const handleResetData = useCallback(() => {
     if (confirm('Are you sure you want to reset all your progress? This cannot be undone!')) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('dragman_highscore');
-        localStorage.removeItem('dragman_stats');
-        localStorage.removeItem('dragman_achievements');
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('dragman_highscore');
+          localStorage.removeItem('dragman_stats');
+          localStorage.removeItem('dragman_achievements');
+        }
+        
+        setHighScore(0);
+        setGameStats({
+          gamesPlayed: 0,
+          totalScore: 0,
+          gamesShared: 0
+        });
+        setAchievements([
+          { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
+          { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "🐉", unlocked: false },
+          { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
+          { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
+          { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
+        ]);
+        setScore(0);
+        
+        // Reset leaderboard
+        setLeaderboard([
+          { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
+          { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
+          { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
+          { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
+          { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
+        ]);
+        
+        alert('All progress has been reset!');
+      } catch (error) {
+        console.error('Error resetting data:', error);
+        alert('Error resetting data. Please try again.');
       }
-      
-      setHighScore(0);
-      setGameStats({
-        gamesPlayed: 0,
-        totalScore: 0,
-        gamesShared: 0
-      });
-      setAchievements([
-        { id: 1, name: "First Steps", description: "Play your first game", icon: "👶", unlocked: false },
-        { id: 2, name: "Dragon Slayer", description: "Score 1000 points", icon: "⚔️", unlocked: false },
-        { id: 3, name: "Speed Demon", description: "Complete 10 games", icon: "⚡", unlocked: false },
-        { id: 4, name: "Social Butterfly", description: "Share your score", icon: "🦋", unlocked: false },
-        { id: 5, name: "Legend", description: "Score 5000 points", icon: "👑", unlocked: false }
-      ]);
-      setScore(0);
-      
-      // Reset leaderboard
-      setLeaderboard([
-        { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
-        { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
-        { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
-        { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
-        { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
-      ]);
-      
-      alert('All progress has been reset!');
     }
   }, []);
 
   // Update leaderboard with current user's score
   const updateLeaderboard = useCallback((newScore: number) => {
-    const defaultLeaderboard = [
-      { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
-      { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
-      { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
-      { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
-      { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
-    ];
-    
-    const currentUser = {
-      fid: user?.fid || 99999,
-      username: user?.displayName || user?.username || "You",
-      score: newScore,
-      avatar: "🐲",
-      isCurrentUser: true
-    };
-    
-    // Insert user in correct position
-    const updatedLeaderboard = [...defaultLeaderboard, currentUser]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6); // Keep top 6
-    
-    setLeaderboard(updatedLeaderboard);
+    try {
+      const defaultLeaderboard = [
+        { fid: 12345, username: "DragonMaster", score: 1500, avatar: "🐉", isCurrentUser: false },
+        { fid: 67890, username: "FireBreath", score: 1200, avatar: "🔥", isCurrentUser: false },
+        { fid: 11111, username: "ScaleKing", score: 980, avatar: "👑", isCurrentUser: false },
+        { fid: 22222, username: "WingRider", score: 850, avatar: "🦅", isCurrentUser: false },
+        { fid: 33333, username: "ClawSlayer", score: 720, avatar: "⚔️", isCurrentUser: false }
+      ];
+      
+      const currentUser = {
+        fid: user?.fid || 99999,
+        username: user?.displayName || user?.username || "You",
+        score: newScore,
+        avatar: "🎮",
+        isCurrentUser: true
+      };
+      
+      // Insert user in correct position
+      const updatedLeaderboard = [...defaultLeaderboard, currentUser]
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 6); // Keep top 6
+      
+      setLeaderboard(updatedLeaderboard);
+    } catch (error) {
+      console.error('Error updating leaderboard:', error);
+    }
   }, [user]);
 
   // Particle system
@@ -322,8 +411,8 @@ export default function Home() {
   const handleShare = async () => {
     try {
       const shareText = score > highScore 
-        ? `🏆 NEW HIGH SCORE! Just scored ${score} points in Dragman! Can you beat my score? 🐉`
-        : `🐉 Just scored ${score} points in Dragman! Can you beat my score?`;
+        ? `?? NEW HIGH SCORE! Just scored ${score} points in Dragman! Can you beat my score? ??`
+        : `?? Just scored ${score} points in Dragman! Can you beat my score?`;
         
       await sdk.actions.composeCast({
         text: shareText,
@@ -637,8 +726,8 @@ export default function Home() {
         const context = await sdk.context;
         if (context?.user?.fid) {
           const notificationTitle = score > highScore 
-            ? '🏆 NEW HIGH SCORE!' 
-            : 'Great Game! 🎮';
+            ? '?? NEW HIGH SCORE!' 
+            : 'Great Game! ??';
             
           await fetch('/api/webhook', {
             method: 'POST',
@@ -668,7 +757,7 @@ export default function Home() {
   };
 
   useEffect(() => {
-    // Initialize SDK and load context
+    // Initialize SDK and load context first
     const initializeSDK = async () => {
       try {
         console.log('Initializing Base Mini App SDK...');
@@ -705,18 +794,66 @@ export default function Home() {
           }
         }
         
-        // Hide loading splash screen and display your app
-        await sdk.actions.ready();
-        console.log('SDK ready called successfully');
-        
       } catch (error) {
         console.error('SDK initialization failed:', error);
         console.log('This is normal if not running in Base app environment');
       }
     };
     
-    // Add a small delay to ensure SDK is loaded
-    setTimeout(initializeSDK, 100);
+    // Initialize SDK first
+    initializeSDK();
+  }, []);
+
+  // Separate useEffect to call ready() AFTER the app is fully loaded and ready to display
+  useEffect(() => {
+    // Wait for the app to be fully loaded before calling ready()
+    const callReady = async () => {
+      try {
+        console.log('🚀 App is fully loaded, calling sdk.actions.ready()...');
+        console.log('SDK object:', sdk);
+        console.log('SDK actions:', sdk?.actions);
+        
+        // Check if we're in a mini app environment first
+        const isInMiniApp = await sdk.isInMiniApp();
+        console.log('Is in mini app:', isInMiniApp);
+        
+        if (isInMiniApp && sdk && sdk.actions && sdk.actions.ready) {
+          await sdk.actions.ready();
+          console.log('✅ SDK ready called successfully - splash screen should be hidden');
+        } else if (!isInMiniApp) {
+          console.log('ℹ️ Not in mini app environment, skipping ready() call');
+        } else {
+          console.error('❌ SDK or sdk.actions.ready is not available');
+        }
+      } catch (error) {
+        console.error('❌ SDK ready() failed:', error);
+        // Don't retry if we're not in a mini app environment
+        try {
+          const isInMiniApp = await sdk.isInMiniApp();
+          if (isInMiniApp) {
+            // Try again after a longer delay
+            setTimeout(async () => {
+              try {
+                console.log('🔄 Retrying sdk.actions.ready()...');
+                if (sdk && sdk.actions && sdk.actions.ready) {
+                  await sdk.actions.ready();
+                  console.log('✅ SDK ready called successfully on retry');
+                }
+              } catch (retryError) {
+                console.error('❌ SDK ready() failed on retry:', retryError);
+              }
+            }, 1000);
+          }
+        } catch (checkError) {
+          console.error('❌ Failed to check mini app status:', checkError);
+        }
+      }
+    };
+
+    // Call ready() after a longer delay to ensure app is fully loaded
+    const timer = setTimeout(callReady, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Update wallet balance and network info
@@ -730,7 +867,8 @@ export default function Home() {
     }
   }, [balance, connector]);
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
         {/* Dragon Icon */}
         <div className="mb-6">
@@ -783,7 +921,7 @@ export default function Home() {
             {isConnected ? (
               <div>
                 <p className="text-sm font-semibold text-blue-800">
-                  🔗 Wallet Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
+                  💡 Wallet Connected: {address?.slice(0, 6)}...{address?.slice(-4)}
                 </p>
                 <p className="text-xs text-gray-600">
                   Balance: {walletBalance} ETH | Network: {networkName}
@@ -806,7 +944,7 @@ export default function Home() {
             ) : (
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  🔓 Wallet Not Connected
+                  💡 Wallet Not Connected
                 </p>
                 <button
                   onClick={() => setShowWalletModal(true)}
@@ -827,7 +965,7 @@ export default function Home() {
             {isAuthenticated ? (
               <div>
                 <p className="text-sm font-semibold text-green-800">
-                  🔐 Authenticated as FID: {authenticatedUser?.fid}
+                  ✅ Authenticated as FID: {authenticatedUser?.fid}
                 </p>
                 <p className="text-xs text-gray-600">
                   Token expires: {authenticatedUser?.exp ? new Date(authenticatedUser.exp * 1000).toLocaleTimeString() : 'Unknown'}
@@ -842,7 +980,7 @@ export default function Home() {
             ) : (
               <div>
                 <p className="text-sm font-semibold text-gray-800">
-                  🔓 Not Authenticated
+                  ❌ Not Authenticated
                 </p>
                 <button
                   onClick={handleSignIn}
@@ -892,7 +1030,7 @@ export default function Home() {
             onClick={handleShare}
             className="w-full mt-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-green-600 hover:to-emerald-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
           >
-            📤 Share Score
+            🔥 Share Score
           </button>
         )}
 
@@ -901,7 +1039,7 @@ export default function Home() {
           onClick={handleResetData}
           className="w-full mt-3 bg-gradient-to-r from-red-500 to-pink-600 text-white font-semibold py-2 px-6 rounded-lg hover:from-red-600 hover:to-pink-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
         >
-          🔄 Reset All Progress
+          🗑️ Reset All Progress
         </button>
 
         {/* New Features Buttons */}
@@ -951,7 +1089,7 @@ export default function Home() {
 
           {/* Daily Challenge */}
           <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
-            <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">🎯 Daily Challenge</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-2 text-center">⭐ Daily Challenge</h3>
             <div className="text-center">
               <p className="text-sm font-semibold text-gray-700">{dailyChallenge.title}</p>
               <p className="text-xs text-gray-600 mb-2">{dailyChallenge.description}</p>
@@ -963,7 +1101,7 @@ export default function Home() {
               </div>
               <p className="text-xs text-gray-600">
                 {dailyChallenge.progress}/{dailyChallenge.target} points
-                {dailyChallenge.completed && <span className="text-green-600 font-semibold"> ✅ Completed!</span>}
+                {dailyChallenge.completed && <span className="text-green-600 font-semibold"> ? Completed!</span>}
               </p>
               {dailyChallenge.completed && (
                 <p className="text-sm font-semibold text-green-600 mt-1">{dailyChallenge.reward}</p>
@@ -973,7 +1111,7 @@ export default function Home() {
 
           {/* Game Stats */}
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">📊 Your Stats</h3>
+            <h3 className="text-lg font-bold text-gray-800 mb-3 text-center">📈 Your Stats</h3>
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-white rounded-lg p-3 shadow-sm">
                 <p className="text-2xl font-bold text-purple-600">{gameStats.gamesPlayed}</p>
@@ -1026,7 +1164,7 @@ export default function Home() {
             Fast Gameplay
           </div>
           <div className="flex items-center justify-center text-gray-600">
-            <span className="mr-2">👥</span>
+            <span className="mr-2">🔥</span>
             Social Features
           </div>
         </div>
@@ -1041,7 +1179,7 @@ export default function Home() {
       {showOnboarding && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
-            <div className="text-4xl mb-4">🎉</div>
+            <div className="text-4xl mb-4">🎮</div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Great Job!</h3>
             <p className="text-gray-600 mb-4">
               You've completed your first game! Add Dragman to your Base app for easy access and notifications.
@@ -1068,7 +1206,7 @@ export default function Home() {
       {showAchievement && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl p-8 max-w-sm w-full text-center animate-bounce">
-            <div className="text-6xl mb-4">{showAchievement.icon}</div>
+            <div className="text-6xl mb-4">🏅</div>
             <h3 className="text-2xl font-bold text-white mb-2">Achievement Unlocked!</h3>
             <p className="text-lg font-semibold text-white mb-2">{showAchievement.name}</p>
             <p className="text-sm text-yellow-100 mb-4">{showAchievement.description}</p>
@@ -1094,7 +1232,7 @@ export default function Home() {
       {showWalletModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full text-center">
-            <div className="text-4xl mb-4">🔗</div>
+            <div className="text-4xl mb-4">💡</div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Connect Wallet</h3>
             <p className="text-gray-600 mb-4">
               Choose your wallet to connect to Dragman and access Base Account features.
@@ -1141,6 +1279,7 @@ export default function Home() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }

@@ -82,6 +82,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Dragman" />
         <link rel="apple-touch-icon" href="/icon.jpg" />
         <link rel="icon" href="/icon.jpg" />
+        {/* Note: ready() should be called AFTER the app is fully loaded, not in HTML head */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
